@@ -2,11 +2,14 @@
 Crawler implementation.
 """
 # pylint: disable=too-many-arguments, too-many-instance-attributes, unused-import, undefined-variable
+import datetime
 import json
 import pathlib
 import os
-from random import randrange
+import random
 import re
+import requests
+from bs4 import BeautifulSoup
 from time import sleep
 from typing import Pattern, Union
 from core_utils import constants
@@ -82,8 +85,7 @@ class Config:
                  encoding=config['encoding'],
                  timeout=config['timeout'],
                  should_verify_certificate=config['should_verify_certificate'],
-                 headless_mode=config['headless_mode']
-        )
+                 headless_mode=config['headless_mode'])
 
     def _validate_config_content(self) -> None:
         """
@@ -94,11 +96,10 @@ class Config:
             config = json.load(f)
         for seed_url in config_dto.seed_urls:
             if not isinstance(config['seed_urls'], list) and not re.match(r'https?://(www\.)?.+', seed_url):
-                raise IncorrectSeedURLError(f"Seed URL '{seed_url}' does not match standard pattern.")
-        num = config['total_articles_to_find_and_parse']
-        if not isinstance(num, int) or num <= 0:
+                raise IncorrectSeedURLError
+        if not isinstance(config['total_articles_to_find_and_parse'], int) or config['total_articles_to_find_and_parse'] <= 0:
             raise IncorrectNumberOfArticlesError
-        if not 0 < num <= 150:
+        if not 0 < config['total_articles_to_find_and_parse'] <= 150:
             raise NumberOfArticlesOutOfRangeError
         if not isinstance(config['headers'], dict):
             raise IncorrectHeadersError
@@ -184,11 +185,12 @@ def make_request(url: str, config: Config) -> requests.models.Response:
     Returns:
         requests.models.Response: A response from a request
     """
-    sleep(randrange(nj))
+    sleep(random.randrange(3))
     return requests.get(url=url,
                         timeout=config.get_timeout(),
                         headers=config.get_headers(),
                         verify=config.get_verify_certificate())
+
 
 class Crawler:
     """
@@ -204,6 +206,9 @@ class Crawler:
         Args:
             config (Config): Configuration
         """
+        self.config = config
+        self.urls = []
+        self.url_pattern = self.config.get_seed_urls()[1].split('/nauka')[0]
 
     def _extract_url(self, article_bs: BeautifulSoup) -> str:
         """
@@ -220,6 +225,13 @@ class Crawler:
         """
         Find articles.
         """
+        for url in self.get_search_urls():
+            response = requests.get(url, self.config)
+            if not response.ok:
+                continue
+            article_bs = BeautifulSoup(response.text, 'lxml')
+            self.urls.append(self._extract_url(article_bs))
+        self.urls.extend(self.urls)
 
     def get_search_urls(self) -> list:
         """
@@ -228,7 +240,7 @@ class Crawler:
         Returns:
             list: seed_urls param
         """
-
+        return self.config.get_seed_urls()
 
 # 10
 # 4, 6, 8, 10
@@ -248,6 +260,10 @@ class HTMLParser:
             article_id (int): Article id
             config (Config): Configuration
         """
+        self.full_url = full_url
+        self.article_id = article_id
+        self.config = config
+        self.article = Article(self.full_url, self.article_id)
 
     def _fill_article_with_text(self, article_soup: BeautifulSoup) -> None:
         """
@@ -256,6 +272,14 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
+        text_elements = article_soup.find_all(['div'])
+
+        extracted_text = []
+        for element in text_elements:
+            extracted_text.append(element.get_text())
+
+        full_text = ' '.join(extracted_text)
+        self.article.text = full_text
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
@@ -283,6 +307,13 @@ class HTMLParser:
         Returns:
             Union[Article, bool, list]: Article instance
         """
+        response = make_request(self.full_url, self.config)
+        if not response.ok:
+            return None
+        article_bs = BeautifulSoup(response.text, 'lxml')
+        self._fill_article_with_text(article_bs)
+
+        return self.article
 
 
 def prepare_environment(base_path: Union[pathlib.Path, str]) -> None:
@@ -298,7 +329,7 @@ def prepare_environment(base_path: Union[pathlib.Path, str]) -> None:
         files = os.listdir(base_path)
         for file in files:
             if os.path.exists(file):
-               os.remove(file)
+                os.remove(file)
 
 
 def main() -> None:
