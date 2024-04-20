@@ -1,2 +1,3 @@
 beautifulsoup4==4.12.0
-requests==2.31.0пше
+requests==2.31.0
+stanza==1.8.1.
