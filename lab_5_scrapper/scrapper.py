@@ -231,7 +231,6 @@ class Crawler:
                 continue
             article_bs = BeautifulSoup(response.text, 'lxml')
             self.urls.append(self._extract_url(article_bs))
-        self.urls.extend(self.urls)
 
     def get_search_urls(self) -> list:
         """
@@ -272,7 +271,7 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        text_elements = article_soup.find_all(['div'])
+        text_elements = article_soup.find_all(['div', 'p'])
 
         extracted_text = []
         for element in text_elements:
@@ -308,8 +307,6 @@ class HTMLParser:
             Union[Article, bool, list]: Article instance
         """
         response = make_request(self.full_url, self.config)
-        if not response.ok:
-            return None
         article_bs = BeautifulSoup(response.text, 'lxml')
         self._fill_article_with_text(article_bs)
 
