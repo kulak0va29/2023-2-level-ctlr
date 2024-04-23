@@ -80,21 +80,25 @@ class Config:
             config = json.load(f)
 
         return ConfigDTO(seed_urls=config['seed_urls'],
-                 total_articles_to_find_and_parse=config['total_articles_to_find_and_parse'],
-                 headers=config['headers'],
-                 encoding=config['encoding'],
-                 timeout=config['timeout'],
-                 should_verify_certificate=config['should_verify_certificate'],
-                 headless_mode=config['headless_mode'])
+                         total_articles_to_find_and_parse=config['total_articles_to_find_and_parse'],
+                         headers=config['headers'],
+                         encoding=config['encoding'],
+                         timeout=config['timeout'],
+                         should_verify_certificate=config['should_verify_certificate'],
+                         headless_mode=config['headless_mode'])
 
     def _validate_config_content(self) -> None:
         """
         Ensure configuration parameters are not corrupt.
         """
         config = self._extract_config_content()
-        if not (isinstance(config.seed_urls, list) and all(re.match(r'https?://(www)?\.21mm.ru/news/nauka+', seed_url) for seed_url in config.seed_urls)):
-                raise IncorrectSeedURLError
-        num = int(config.total_articles)
+        if not (isinstance(config.seed_urls, list)
+                and all(re.match(r'https?://(www)?\.21mm.ru+', seed_url)
+                        for seed_url in config.seed_urls
+                        )
+                ):
+            raise IncorrectSeedURLError
+        num = config.total_articles
         if not isinstance(num, int) or num <= 0:
             raise IncorrectNumberOfArticlesError
         if not 0 < num <= 150:
@@ -103,7 +107,7 @@ class Config:
             raise IncorrectHeadersError
         if not isinstance(config.encoding, str):
             raise IncorrectEncodingError
-        if not isinstance(config.timeout, int) and (0 <= config.timeout <= 60):
+        if not isinstance(config.timeout, int) or not (0 <= config.timeout <= 60):
             raise IncorrectTimeoutError
         if not isinstance(config.should_verify_certificate, bool) or not isinstance(config.headless_mode, bool):
             raise IncorrectVerifyError
@@ -206,7 +210,7 @@ class Crawler:
         """
         self.config = config
         self.urls = []
-        self.url_pattern = self.config.get_seed_urls()[1].split('/nauka')[0]
+        self.url_pattern = 'https://www.21mm.ru'
 
     def _extract_url(self, article_bs: BeautifulSoup) -> str:
         """
@@ -218,17 +222,25 @@ class Crawler:
         Returns:
             str: Url from HTML
         """
+        links = article_bs.find_all('div', {'class': 'figcaption promo-link'})
+        url = ''
+        for each in links:
+            for link in each.select('a'):
+                url = link['href']
+        return self.url_pattern + url
 
     def find_articles(self) -> None:
         """
         Find articles.
         """
+        urls = []
         for url in self.get_search_urls():
-            response = requests.get(url, self.config)
+            response = make_request(url, self.config)
             if not response.ok:
                 continue
             article_bs = BeautifulSoup(response.text, 'lxml')
-            self.urls.append(self._extract_url(article_bs))
+            urls.append(self._extract_url(article_bs))
+        self.urls.extend(urls)
 
     def get_search_urls(self) -> list:
         """
@@ -260,7 +272,7 @@ class HTMLParser:
         self.full_url = full_url
         self.article_id = article_id
         self.config = config
-        self.article = Article(self.full_url, self.article_id)
+        self.article = Article(full_url, article_id)
 
     def _fill_article_with_text(self, article_soup: BeautifulSoup) -> None:
         """
@@ -269,14 +281,13 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        text_elements = article_soup.find_all(['div', 'p'])
-
-        extracted_text = []
-        for element in text_elements:
-            extracted_text.append(element.get_text())
-
-        full_text = ' '.join(extracted_text)
-        self.article.text = full_text
+        text_elements = article_soup.find_all('div')
+        if text_elements:
+            all_divs = text_elements[0].find_all('div', {'class': 'categories-block__figure border-radius4px'})
+            extracted_text = []
+            for div in all_divs:
+                extracted_text.append(div.text)
+            self.article.text = ''.join(extracted_text)
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
