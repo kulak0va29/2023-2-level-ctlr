@@ -108,8 +108,6 @@ class Article:
     """
     #: A date
     date: Optional[datetime]
-
-    #: CONLL-U sentences
     _conllu_sentences: Sequence[SentenceProtocol]
 
     def __init__(self, url: Optional[str], article_id: int) -> None:
@@ -263,3 +261,13 @@ class Article:
             dict: POS frequency
         """
         return self.pos_frequencies
+
+    def get_pattern_path(self) -> pathlib.Path:
+        """
+        Get path for requested article's pattern info.
+
+        Returns:
+            pathlib.Path: Path to requested article's pattern info
+        """
+        pattern_file_name = f"{self.article_id}_pattern.json"
+        return ASSETS_PATH / pattern_file_name
