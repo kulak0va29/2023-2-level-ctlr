@@ -333,13 +333,13 @@ class HTMLParser:
         Returns:
             Union[Article, bool, list]: Article instance
         """
-        # response = make_request(self.full_url, self.config)
-        # if response.ok:
-        #     article_bs = BeautifulSoup(response.text, 'lxml')
-        #     self._fill_article_with_text(article_bs)
-        #     self._fill_article_with_meta_information(article_bs)
-        #
-        # return self.article
+        response = make_request(self.full_url, self.config)
+        if response.ok:
+            article_bs = BeautifulSoup(response.text, 'lxml')
+            self._fill_article_with_text(article_bs)
+            self._fill_article_with_meta_information(article_bs)
+
+        return self.article
 
 
 def prepare_environment(base_path: Union[pathlib.Path, str]) -> None:
@@ -349,9 +349,9 @@ def prepare_environment(base_path: Union[pathlib.Path, str]) -> None:
     Args:
         base_path (Union[pathlib.Path, str]): Path where articles stores
     """
-    # base_path.mkdir(parents=True, exist_ok=True)
-    # for file in base_path.iterdir():
-    #     file.unlink(missing_ok=True)
+    base_path.mkdir(parents=True, exist_ok=True)
+    for file in base_path.iterdir():
+        file.unlink(missing_ok=True)
 
 
 def main() -> None:
