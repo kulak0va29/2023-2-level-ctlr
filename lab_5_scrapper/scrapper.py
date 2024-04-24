@@ -5,17 +5,16 @@ Crawler implementation.
 import datetime
 import json
 import pathlib
-import os
 import random
 import re
 import requests
 from bs4 import BeautifulSoup
 from time import sleep
 from typing import Pattern, Union
-from core_utils import constants
-from core_utils.article.io import to_raw
 from core_utils.article.article import Article
+from core_utils.article.io import to_meta, to_raw
 from core_utils.config_dto import ConfigDTO
+from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
 
 class IncorrectSeedURLError(Exception):
@@ -234,13 +233,14 @@ class Crawler:
         Find articles.
         """
         urls = []
-        for url in self.get_search_urls():
-            response = make_request(url, self.config)
-            if not response.ok:
-                continue
-            article_bs = BeautifulSoup(response.text, 'lxml')
-            urls.append(self._extract_url(article_bs))
-        self.urls.extend(urls)
+        while len(urls) < self.config.get_num_articles():
+            for url in self.get_search_urls():
+                response = make_request(url, self.config)
+                if not response.ok:
+                    continue
+                article_bs = BeautifulSoup(response.text, 'lxml')
+                urls.append(self._extract_url(article_bs))
+            self.urls.extend(urls)
 
     def get_search_urls(self) -> list:
         """
@@ -272,7 +272,7 @@ class HTMLParser:
         self.full_url = full_url
         self.article_id = article_id
         self.config = config
-        self.article = Article(full_url, article_id)
+        self.article = Article(self.full_url, self.article_id)
 
     def _fill_article_with_text(self, article_soup: BeautifulSoup) -> None:
         """
@@ -282,12 +282,12 @@ class HTMLParser:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
         text_elements = article_soup.find_all('div')
-        if text_elements:
-            all_divs = text_elements[0].find_all('div', {'class': 'categories-block__figure border-radius4px'})
-            extracted_text = []
-            for div in all_divs:
-                extracted_text.append(div.text)
-            self.article.text = ''.join(extracted_text)
+        text = ''
+        for element in text_elements:
+            if not element.string:
+                continue
+            text += f'\n{element.string}'
+        self.article.text = text
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
@@ -296,6 +296,23 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
+        # title = article_soup.fund(property='og:title')
+        # if title:
+        #     self.article.title = title.text
+        # author = article_soup.find(tag='meta', itemprop='author')
+        # if not author:
+        #     self.article.author.append('NOT FOUND')
+        # else:
+        #     self.article.author.append(author.text)
+        # date = article_soup.find(itemprop='dateModified')
+        # if date:
+        #     self.article.date = self.unify_date_format(date.text)
+        #
+        # topics = article_soup.find_all({'class': 'most-popular__marker'})
+        # for topic in topics:
+        #     self.article.topics.append(topic.text)
+        #
+        # return self.article
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
@@ -307,6 +324,7 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
+        # return datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
 
     def parse(self) -> Union[Article, bool, list]:
         """
@@ -315,12 +333,13 @@ class HTMLParser:
         Returns:
             Union[Article, bool, list]: Article instance
         """
-        response = make_request(self.full_url, self.config)
-        if response.ok:
-            article_bs = BeautifulSoup(response.text, 'lxml')
-            self._fill_article_with_text(article_bs)
-
-        return self.article
+        # response = make_request(self.full_url, self.config)
+        # if response.ok:
+        #     article_bs = BeautifulSoup(response.text, 'lxml')
+        #     self._fill_article_with_text(article_bs)
+        #     self._fill_article_with_meta_information(article_bs)
+        #
+        # return self.article
 
 
 def prepare_environment(base_path: Union[pathlib.Path, str]) -> None:
@@ -330,19 +349,26 @@ def prepare_environment(base_path: Union[pathlib.Path, str]) -> None:
     Args:
         base_path (Union[pathlib.Path, str]): Path where articles stores
     """
-    if not os.path.exists(base_path):
-        os.makedirs(base_path)
-    else:
-        files = os.listdir(base_path)
-        for file in files:
-            if os.path.exists(file):
-                os.remove(file)
+    # base_path.mkdir(parents=True, exist_ok=True)
+    # for file in base_path.iterdir():
+    #     file.unlink(missing_ok=True)
 
 
 def main() -> None:
     """
     Entrypoint for scrapper module.
     """
+    # config = Config(CRAWLER_CONFIG_PATH)
+    # crawler = Crawler(config)
+    # crawler.find_articles()
+    # prepare_environment(ASSETS_PATH)
+    #
+    # for id_num, url in enumerate(crawler.urls, 1):
+    #     parser = HTMLParser(url, id_num, config)
+    #     article = parser.parse()
+    #     if isinstance(article, Article):
+    #         to_raw(article)
+    #         to_meta(article)
 
 
 if __name__ == "__main__":
