@@ -14,7 +14,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from core_utils.article.article import Article
-from core_utils.article.io import to_raw
+from core_utils.article.io import to_meta, to_raw
 from core_utils.config_dto import ConfigDTO
 from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
@@ -324,7 +324,7 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
-        return datetime.datetime.strptime(date_str, '%d.%m.%Y')
+        return datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
 
     def parse(self) -> Union[Article, bool, list]:
         """
@@ -359,15 +359,17 @@ def main() -> None:
     Entrypoint for scrapper module.
     """
     config = Config(CRAWLER_CONFIG_PATH)
-    crawler = Crawler(config)
-    crawler.find_articles()
     prepare_environment(ASSETS_PATH)
 
-    for id_num, url in enumerate(crawler.urls, 1):
-        parser = HTMLParser(url, id_num, config)
+    crawler = Crawler(config)
+    crawler.find_articles()
+
+    for index, url in enumerate(crawler.urls, 1):
+        parser = HTMLParser(url, index, config)
         article = parser.parse()
         if isinstance(article, Article):
             to_raw(article)
+            to_meta(article)
         print('Done')
 
 
