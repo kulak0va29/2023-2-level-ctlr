@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 from time import sleep
 from typing import Pattern, Union
 from core_utils.article.article import Article
-from core_utils.article.io import to_meta, to_raw
+from core_utils.article.io import to_raw
 from core_utils.config_dto import ConfigDTO
 from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
@@ -296,23 +296,21 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        # title = article_soup.fund(property='og:title')
-        # if title:
-        #     self.article.title = title.text
-        # author = article_soup.find(tag='meta', itemprop='author')
-        # if not author:
-        #     self.article.author.append('NOT FOUND')
-        # else:
-        #     self.article.author.append(author.text)
-        # date = article_soup.find(itemprop='dateModified')
-        # if date:
-        #     self.article.date = self.unify_date_format(date.text)
-        #
-        # topics = article_soup.find_all({'class': 'most-popular__marker'})
-        # for topic in topics:
-        #     self.article.topics.append(topic.text)
-        #
-        # return self.article
+        title = article_soup.fund(property='og:title')
+        if title:
+            self.article.title = title.text
+        author = article_soup.find(tag='meta', itemprop='author')
+        if not author:
+            self.article.author.append('NOT FOUND')
+        else:
+            self.article.author.append(author.text)
+        date = article_soup.find(itemprop='dateModified')
+        if date:
+            self.article.date = self.unify_date_format(date.text)
+
+        topics = article_soup.find_all({'class': 'most-popular__marker'})
+        for topic in topics:
+            self.article.topics.append(topic.text)
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
@@ -324,7 +322,7 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
-        # return datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
+        return datetime.datetime.strptime(date_str, '%d.%m.%Y')
 
     def parse(self) -> Union[Article, bool, list]:
         """
