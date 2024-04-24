@@ -298,7 +298,7 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        title = article_soup.fund(property='og:title')
+        title = article_soup.find(property='og:title')
         if title:
             self.article.title = title.text
         author = article_soup.find(tag='meta', itemprop='author')
