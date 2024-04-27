@@ -298,7 +298,7 @@ class HTMLParser:
         """
         title = article_soup.find('meta', attrs={'itemprop': 'headline'})
         if title:
-            self.article.title = title['content']
+            self.article.title = title.text
         author = article_soup.find('meta', attrs={'itemprop': 'author'}).text
         if not author or len(author) == 0:
             self.article.author.append('NOT FOUND')
