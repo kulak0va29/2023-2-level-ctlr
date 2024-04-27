@@ -296,14 +296,19 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        self.article.title = str(article_soup.find('meta', attrs={'property': 'og:title'})['content'])
+        title_tag = article_soup.find('meta', attrs={'property': 'og:title'})
+        if title_tag:
+            self.article.title = str(title_tag['content'])
 
-        author = str(article_soup.find('meta', attrs={'itemprop': 'author'})['content'])
+        author_tag = article_soup.find('meta', attrs={'itemprop': 'author'})
+        author = str(author_tag['content']) if author_tag else ''
         if not author or len(author) == 0:
             self.article.author.append('NOT FOUND')
         else:
             self.article.author.append(author)
-        date = str(article_soup.find('meta', attrs={'itemprop': 'dateModified'})['content'])
+
+        date_tag = article_soup.find('meta', attrs={'itemprop': 'dateModified'})
+        date = str(date_tag['content']) if date_tag else ''
         if date:
             self.article.date = self.unify_date_format(date)
 
