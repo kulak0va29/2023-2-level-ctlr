@@ -227,7 +227,7 @@ class Crawler:
         for el in links:
             link = el.get('href')
             url = self.url_pattern + link
-            return url
+        return url
 
     def find_articles(self) -> None:
         """
@@ -282,8 +282,7 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        meta_tag = article_soup.find('meta', attrs={'name': 'description'})
-        description = meta_tag['content']
+        description = article_soup.find('meta', attrs={'name': 'description'}).text
         all_txt = article_soup.find('div', attrs={'class': 'detail-text-div'}).text
         self.article.text = description + all_txt
 
@@ -297,12 +296,12 @@ class HTMLParser:
         title = article_soup.find('meta', attrs={'itemprop': 'headline'})
         if title:
             self.article.title = title['content']
-        author = article_soup.find('meta', attrs={'itemprop': 'author'})
+        author = article_soup.find('meta', attrs={'itemprop': 'author'}).text
         if not author or len(author) == 0:
             self.article.author.append('NOT FOUND')
         else:
-            self.article.author.append(author.text)
-        date = article_soup.find('meta', attrs={'itemprop': 'dateModified'})['content']
+            self.article.author.append(author)
+        date = article_soup.find('meta', attrs={'itemprop': 'dateModified'}).text
         if date:
             self.article.date = self.unify_date_format(date)
 
