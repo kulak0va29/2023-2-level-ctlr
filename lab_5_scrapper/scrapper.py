@@ -304,7 +304,7 @@ class HTMLParser:
         else:
             self.article.author.append(author)
 
-        date = article_soup.find('meta', attrs={'itemprop': 'dateModified'})
+        date = article_soup.find('meta', attrs={'itemprop': 'dateModified'}).text
         if date:
             self.article.date = self.unify_date_format(date)
 
