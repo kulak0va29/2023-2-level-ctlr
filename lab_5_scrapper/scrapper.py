@@ -223,13 +223,8 @@ class Crawler:
         Returns:
             str: Url from HTML
         """
-        links = article_bs.find_all('a', attrs={'class': 'figcaption promo-link'})
-        for link in links:
-            url = str(self.url_pattern + link.get('href'))
-            if url not in self.urls:
-                break
-        else:
-            url = ''
+        link = article_bs.find('a', attrs={'class': 'figcaption promo-link'})
+        url = str(self.url_pattern + link.get('href'))
         return url
 
     def find_articles(self) -> None:
