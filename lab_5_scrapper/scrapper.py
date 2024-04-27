@@ -223,10 +223,13 @@ class Crawler:
         Returns:
             str: Url from HTML
         """
-        links = article_bs.find_all('a', 'figcaption promo-link')
-        for el in links:
-            link = el.get('href')
-            url = self.url_pattern + link
+        links = article_bs.find_all('a', attrs={'class': 'figcaption promo-link'})
+        for link in links:
+            url = str(self.url_pattern + link.get('href'))
+            if url not in self.urls:
+                break
+        else:
+            url = ''
         return url
 
     def find_articles(self) -> None:
@@ -284,7 +287,7 @@ class HTMLParser:
         """
         description = article_soup.find('meta', attrs={'name': 'description'}).text
         all_txt = article_soup.find('div', attrs={'class': 'detail-text-div'}).text
-        self.article.text = description + all_txt
+        self.article.text = str(description + all_txt)
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
