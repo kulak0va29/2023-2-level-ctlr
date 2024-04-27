@@ -223,12 +223,11 @@ class Crawler:
         Returns:
             str: Url from HTML
         """
-        links = article_bs.find_all('div', {'class': 'figcaption promo-link'})
-        url = ''
-        for each in links:
-            for link in each.select('a'):
-                url = link['href']
-        return self.url_pattern + url
+        links = article_bs.find_all('a', 'figcaption promo-link')
+        for el in links:
+            link = el.get('href')
+            url = self.url_pattern + link
+            return url
 
     def find_articles(self) -> None:
         """
@@ -283,13 +282,10 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        text_elements = article_soup.find_all('div')
-        text = ''
-        for element in text_elements:
-            if not element.string:
-                continue
-            text += f'\n{element.string}'
-        self.article.text = text
+        meta_tag = article_soup.find('meta', attrs={'name': 'description'})
+        description = meta_tag['content']
+        all_txt = article_soup.find('div', attrs={'class': 'detail-text-div'}).text
+        self.article.text = description + all_txt
 
     def _fill_article_with_meta_information(self, article_soup: BeautifulSoup) -> None:
         """
@@ -298,19 +294,19 @@ class HTMLParser:
         Args:
             article_soup (bs4.BeautifulSoup): BeautifulSoup instance
         """
-        title = article_soup.find(property='og:title')
+        title = article_soup.find('meta', attrs={'itemprop': 'headline'})
         if title:
-            self.article.title = title.text
-        author = article_soup.find(tag='meta', itemprop='author')
-        if not author:
+            self.article.title = title['content']
+        author = article_soup.find('meta', attrs={'itemprop': 'author'})
+        if not author or len(author) == 0:
             self.article.author.append('NOT FOUND')
         else:
             self.article.author.append(author.text)
-        date = article_soup.find(itemprop='dateModified')
+        date = article_soup.find('meta', attrs={'itemprop': 'dateModified'})['content']
         if date:
-            self.article.date = self.unify_date_format(date.text)
+            self.article.date = self.unify_date_format(date)
 
-        topics = article_soup.find_all({'class': 'most-popular__marker'})
+        topics = article_soup.find('div', class_='article-tag-tags').find_all('a')
         for topic in topics:
             self.article.topics.append(topic.text)
 
@@ -324,6 +320,10 @@ class HTMLParser:
         Returns:
             datetime.datetime: Datetime object
         """
+        if 'MSK' in date_str:
+            date_str = date_str.replace('MSK', ' ')
+        if '+00:00' in date_str:
+            date_str = date_str.replace('+00:00', '')
         return datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')
 
     def parse(self) -> Union[Article, bool, list]:
