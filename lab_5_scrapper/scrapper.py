@@ -223,23 +223,29 @@ class Crawler:
         Returns:
             str: Url from HTML
         """
-        link = article_bs.find('a', attrs={'class': 'figcaption promo-link'})
-        url = str(self.url_pattern + link.get('href'))
+        url = ''
+        links = article_bs.find_all('a', attrs={'class': 'figcaption promo-link'})
+        for link in links:
+            url = str(self.url_pattern + link.get('href'))
+            if url not in self.urls:
+                break
         return url
 
     def find_articles(self) -> None:
         """
         Find articles.
         """
-        urls = []
-        while len(urls) < self.config.get_num_articles():
-            for url in self.get_search_urls():
-                response = make_request(url, self.config)
+        seed_urls = self.get_search_urls()
+
+        while len(self.urls) < self.config.get_num_articles():
+            for seed_url in seed_urls:
+                response = make_request(seed_url, self.config)
                 if not response.ok:
                     continue
-                article_bs = BeautifulSoup(response.text, 'lxml')
-                urls.append(self._extract_url(article_bs))
-            self.urls.extend(urls)
+
+                article_bs = BeautifulSoup(response.text, "lxml")
+                extracted = self._extract_url(article_bs)
+                self.urls.append(extracted)
 
     def get_search_urls(self) -> list:
         """
