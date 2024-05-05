@@ -20,31 +20,45 @@ from core_utils.constants import ASSETS_PATH, CRAWLER_CONFIG_PATH
 
 
 class IncorrectSeedURLError(Exception):
-    pass
-
-
-class IncorrectNumberOfArticlesError(Exception):
-    pass
+    """
+    The seed-url is not appropriate.
+    """
 
 
 class NumberOfArticlesOutOfRangeError(Exception):
-    pass
+    """
+    Total number of articles is out of range from 1 to 150.
+    """
+
+
+class IncorrectNumberOfArticlesError(Exception):
+    """
+    Total number of articles to parse is not integer.
+    """
 
 
 class IncorrectHeadersError(Exception):
-    pass
+    """
+    Headers are not in a form of dictionary.
+    """
 
 
 class IncorrectEncodingError(Exception):
-    pass
-
-
-class IncorrectVerifyError(Exception):
-    pass
+    """
+    Encoding must be specified as a string.
+    """
 
 
 class IncorrectTimeoutError(Exception):
-    pass
+    """
+    Timeout value must be a positive integer less than 60.
+    """
+
+
+class IncorrectVerifyError(Exception):
+    """
+    Verify certificate value must either be True or False.
+    """
 
 
 class Config:
@@ -108,7 +122,7 @@ class Config:
             raise IncorrectHeadersError
         if not isinstance(config.encoding, str):
             raise IncorrectEncodingError
-        if not isinstance(config.timeout, int) or not (0 <= config.timeout <= 60):
+        if not isinstance(config.timeout, int) or not 0 <= config.timeout <= 60:
             raise IncorrectTimeoutError
         if not isinstance(config.should_verify_certificate, bool) or not isinstance(config.headless_mode, bool):
             raise IncorrectVerifyError
