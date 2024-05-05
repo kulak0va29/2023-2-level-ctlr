@@ -94,13 +94,7 @@ class Config:
         with open(self.path_to_config, 'r', encoding='utf-8') as f:
             config = json.load(f)
 
-        return ConfigDTO(seed_urls=config['seed_urls'],
-                         total_articles_to_find_and_parse=config['total_articles_to_find_and_parse'],
-                         headers=config['headers'],
-                         encoding=config['encoding'],
-                         timeout=config['timeout'],
-                         should_verify_certificate=config['should_verify_certificate'],
-                         headless_mode=config['headless_mode'])
+        return ConfigDTO(**config)
 
     def _validate_config_content(self) -> None:
         """
@@ -124,7 +118,8 @@ class Config:
             raise IncorrectEncodingError
         if not isinstance(config.timeout, int) or not 0 <= config.timeout <= 60:
             raise IncorrectTimeoutError
-        if not isinstance(config.should_verify_certificate, bool) or not isinstance(config.headless_mode, bool):
+        if not isinstance(config.should_verify_certificate, bool)\
+                or not isinstance(config.headless_mode, bool):
             raise IncorrectVerifyError
 
     def get_seed_urls(self) -> list[str]:
