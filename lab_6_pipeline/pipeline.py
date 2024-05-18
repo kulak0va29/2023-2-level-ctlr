@@ -3,12 +3,15 @@ Pipeline for CONLL-U formatting.
 """
 # pylint: disable=too-few-public-methods, unused-import, undefined-variable, too-many-nested-blocks
 import pathlib
-from core_utils.constants import ASSETS_PATH
-from core_utils.article.article import (Article, get_article_id_from_filepath)
+
+import spacy_udpipe
+from networkx import DiGraph
+
+from core_utils.constants import ASSETS_PATH, UDPIPE_MODEL_PATH
+from core_utils.article.article import (Article, ArtifactType, get_article_id_from_filepath)
 from core_utils.article.io import from_raw, to_cleaned
 from core_utils.pipeline import (AbstractCoNLLUAnalyzer, CoNLLUDocument, LibraryWrapper,
                                  PipelineProtocol, StanzaDocument, TreeNode)
-from networkx import DiGraph
 
 
 class InconsistentDatasetError(Exception):
@@ -27,16 +30,6 @@ class EmptyFileError(Exception):
     """
     Article file is empty
     """
-
-try:
-    from networkx import DiGraph
-except ImportError:  # pragma: no cover
-    DiGraph = None  # type: ignore
-    print('No libraries installed. Failed to import.')
-
-from core_utils.article.article import Article
-from core_utils.pipeline import (AbstractCoNLLUAnalyzer, CoNLLUDocument, LibraryWrapper,
-                                 PipelineProtocol, StanzaDocument, TreeNode)
 
 
 class CorpusManager:
@@ -74,7 +67,10 @@ class CorpusManager:
         if len(raw_files) != len(meta_files):
             raise InconsistentDatasetError
 
-        indexed_files = [(int(get_article_id_from_filepath(meta)), meta, raw) for meta, raw in zip(meta_files, raw_files)]
+        indexed_files = [
+            (int(get_article_id_from_filepath(meta)), meta, raw)
+            for meta, raw in zip(meta_files, raw_files)
+        ]
 
         indexed_files.sort(key=lambda x: x[0])
 
@@ -143,6 +139,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         """
         Initialize an instance of the UDPipeAnalyzer class.
         """
+        self._analyzer = self._bootstrap()
 
     def _bootstrap(self) -> AbstractCoNLLUAnalyzer:
         """
@@ -151,6 +148,16 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             AbstractCoNLLUAnalyzer: Analyzer instance
         """
+        model = spacy_udpipe.load_from_path(
+            lang="ru",
+            path=str(UDPIPE_MODEL_PATH)
+        )
+        model.add_pipe(
+            "conll_formatter",
+            last=True,
+            config={"conversion_maps": {"XPOS": {"": "_"}}, "include_headers": True},
+        )
+        return model
 
     def analyze(self, texts: list[str]) -> list[StanzaDocument | str]:
         """
@@ -162,6 +169,8 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             list[StanzaDocument | str]: List of documents
         """
+        docs = [self._analyzer(text)._.conll_str for text in texts]
+        return docs
 
     def to_conllu(self, article: Article) -> None:
         """
@@ -170,6 +179,9 @@ class UDPipeAnalyzer(LibraryWrapper):
         Args:
             article (Article): Article containing information to save
         """
+        with open(article.get_file_path(ArtifactType.UDPIPE_CONLLU), 'w', encoding='utf-8') as annotation_file:
+            annotation_file.writelines(article.get_conllu_info())
+            annotation_file.write("\n")
 
 
 class StanzaAnalyzer(LibraryWrapper):
@@ -317,9 +329,8 @@ def main() -> None:
     Entrypoint for pipeline module.
     """
     corpus_manager = CorpusManager(path_to_raw_txt_data=ASSETS_PATH)
-    corpus_manager._validate_dataset()
-    corpus_manager._scan_dataset()
-    pipeline = TextProcessingPipeline(corpus_manager)
+    analyzer = UDPipeAnalyzer()
+    pipeline = TextProcessingPipeline(corpus_manager, analyzer)
     pipeline.run()
 
 
