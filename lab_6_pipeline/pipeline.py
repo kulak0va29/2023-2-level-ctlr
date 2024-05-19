@@ -7,7 +7,7 @@ import pathlib
 import spacy_udpipe
 from networkx import DiGraph
 
-from core_utils.article.article import Article, ArtifactType, get_article_id_from_filepath
+from core_utils.article.article import Article, ArtifactType, get_article_id_from_filepath, split_by_sentence
 from core_utils.article.io import from_raw, to_cleaned
 from core_utils.constants import ASSETS_PATH, UDPIPE_MODEL_PATH
 from core_utils.pipeline import (AbstractCoNLLUAnalyzer, CoNLLUDocument, LibraryWrapper,
@@ -82,12 +82,15 @@ class CorpusManager:
         """
         Register each dataset entry.
         """
-        for file in self.path_to_raw_txt_data.glob('*_raw.txt'):
-            article_id = get_article_id_from_filepath(file)
-            self._storage[article_id] = from_raw(
-                path=file,
-                article=Article(url=None, article_id=article_id)
-            )
+        # for file in self.path_to_raw_txt_data.glob('*_raw.txt'):
+        #     article_id = get_article_id_from_filepath(file)
+        #     self._storage[article_id] = from_raw(
+        #         path=file,
+        #         article=Article(url=None, article_id=article_id)
+        #     )
+        for file in list(self.path_to_raw_txt_data.glob("*_raw.txt")):
+            ind = get_article_id_from_filepath(file)
+            self._storage[ind] = from_raw(file, Article(None, ind))
 
     def get_articles(self) -> dict:
         """
@@ -115,7 +118,7 @@ class TextProcessingPipeline(PipelineProtocol):
             analyzer (LibraryWrapper | None): Analyzer instance
         """
         self._corpus = corpus_manager
-        self.analyzer = analyzer
+        self._analyzer = analyzer
 
     def run(self) -> None:
         """
@@ -123,9 +126,12 @@ class TextProcessingPipeline(PipelineProtocol):
         """
         articles = self._corpus.get_articles().values()
         for article in articles:
-            raw_texts = article.get_raw_text_path()
-            from_raw(raw_texts, article)
             to_cleaned(article)
+            if self._analyzer:
+                texts = split_by_sentence(article.text)
+                text_analyze = self._analyzer.analyze(texts)
+                article.set_conllu_info(text_analyze)
+                self._analyzer.to_conllu(article)
 
 
 class UDPipeAnalyzer(LibraryWrapper):
