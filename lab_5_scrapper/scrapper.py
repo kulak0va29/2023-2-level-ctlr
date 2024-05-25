@@ -319,7 +319,7 @@ class HTMLParser:
         if date:
             self.article.date = self.unify_date_format(date)
 
-        topics = article_soup.find('div', class_='article-tag-tags').find_all('a')
+        topics = article_soup.find_all('a', class_='most-popular__marker')
         for topic in topics:
             self.article.topics.append(topic.text)
 
