@@ -83,15 +83,11 @@ class CorpusManager:
         """
         Register each dataset entry.
         """
-        # for file in self.path_to_raw_txt_data.glob('*_raw.txt'):
-        #     article_id = get_article_id_from_filepath(file)
-        #     self._storage[article_id] = from_raw(
-        #         path=file,
-        #         article=Article(url=None, article_id=article_id)
-        #     )
-        for file in list(self.path_to_raw_txt_data.glob("*_raw.txt")):
-            ind = get_article_id_from_filepath(file)
-            self._storage[ind] = from_raw(file, Article(None, ind))
+        self._storage = {
+            get_article_id_from_filepath(file):
+                from_raw(file, Article(url=None, article_id=get_article_id_from_filepath(file)))
+            for file in list(self.path_to_raw_txt_data.glob("*_raw.txt"))
+        }
 
     def get_articles(self) -> dict:
         """
@@ -176,8 +172,7 @@ class UDPipeAnalyzer(LibraryWrapper):
         Returns:
             list[StanzaDocument | str]: List of documents
         """
-        docs = [self._analyzer(text)._.conll_str for text in texts]
-        return docs
+        return [self._analyzer(text)._.conll_str for text in texts]
 
     def to_conllu(self, article: Article) -> None:
         """

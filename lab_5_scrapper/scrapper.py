@@ -233,7 +233,7 @@ class Crawler:
             str: Url from HTML
         """
         url = ''
-        links = article_bs.find_all('a', attrs={'class': 'figcaption promo-link'})
+        links = article_bs.find_all('a', attrs={'class': 'most-popular__text-preview'})
         for link in links:
             url = str(self.url_pattern + link.get('href'))
             if url not in self.urls:
