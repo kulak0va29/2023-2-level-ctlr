@@ -44,6 +44,7 @@ class IncorrectHeadersError(Exception):
 
 
 class IncorrectEncodingError(Exception):
+
     """
     Encoding must be specified as a string.
     """
@@ -320,7 +321,7 @@ class HTMLParser:
 
         topics = article_soup.find('div', class_='article-tag-tags').find_all('a')
         for topic in topics:
-            self.article.topics.append(topic.text)
+                self.article.topics.append(topic.text)
 
     def unify_date_format(self, date_str: str) -> datetime.datetime:
         """
